@@ -6,10 +6,8 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 
-# Load dataset and preprocess
 df = pd.read_csv("accident.csv").dropna()
 
-# Encode categorical variables
 label_encoders = {}
 for col in ["Gender", "Helmet_Used", "Seatbelt_Used"]:
     le = LabelEncoder()
@@ -19,15 +17,12 @@ for col in ["Gender", "Helmet_Used", "Seatbelt_Used"]:
 X = df.drop(columns=["Survived"])
 y = df["Survived"]
 
-# Train model
 model = RandomForestClassifier(n_estimators=100, random_state=42)
 model.fit(X, y)
 
-# Save model and encoders
 pickle.dump(model, open("model.pkl", "wb"))
 pickle.dump(label_encoders, open("encoders.pkl", "wb"))
 
-# Flask app
 app = Flask(__name__)
 
 @app.route("/", methods=["GET", "POST"])
@@ -41,20 +36,20 @@ def index():
             helmet = request.form["helmet"]
             seatbelt = request.form["seatbelt"]
 
-            # Load model and encoders
             model = pickle.load(open("model.pkl", "rb"))
             encoders = pickle.load(open("encoders.pkl", "rb"))
 
-            # Encode categorical inputs
             gender_encoded = encoders["Gender"].transform([gender])[0]
             helmet_encoded = encoders["Helmet_Used"].transform([helmet])[0]
             seatbelt_encoded = encoders["Seatbelt_Used"].transform([seatbelt])[0]
 
-            # Predict
-            input_data = np.array([[age, gender_encoded, speed, helmet_encoded, seatbelt_encoded]])
+            input_data = pd.DataFrame([[
+                age, gender_encoded, speed, helmet_encoded, seatbelt_encoded
+            ]], columns=["Age", "Gender", "Speed_of_Impact", "Helmet_Used", "Seatbelt_Used"])
+
             prediction = model.predict(input_data)[0]
             prediction = "Survived" if prediction == 1 else "Did not survive"
-        
+
         except Exception as e:
             prediction = f"Error: {e}"
 
